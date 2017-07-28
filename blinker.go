@@ -10,57 +10,92 @@ import (
 
 const blinkerPin = 10
 
+type BlinkSpeed int
+
+const (
+	BlinkFastest BlinkSpeed = iota
+	BlinkFast
+	BlinkSlow
+	BlinkSlowest
+)
+
+func (blinkSpeed BlinkSpeed) Duration() time.Duration {
+	return map[BlinkSpeed]time.Duration{
+		BlinkFastest: 50 * time.Millisecond,
+		BlinkFast:    100 * time.Millisecond,
+		BlinkSlow:    700 * time.Millisecond,
+		BlinkSlowest: 1500 * time.Millisecond,
+	}[blinkSpeed]
+}
+
 type Blinker struct {
 	pin         rpio.Pin
 	onDuration  time.Duration
 	offDuration time.Duration
 	stopChan    chan bool
+	toggle      chan bool
 	wg          sync.WaitGroup
 }
 
-func NewBlinker(pin int) *Blinker {
+func NewBlinker(pin int, speed BlinkSpeed) *Blinker {
 	rpioPin := rpio.Pin(pin)
 	rpioPin.Output()
 	return &Blinker{
 		pin:         rpioPin,
-		onDuration:  time.Second,
-		offDuration: time.Second,
-		stopChan:    make(chan bool),
+		onDuration:  speed.Duration(),
+		offDuration: speed.Duration(),
+		toggle:      make(chan bool),
 	}
 }
 
 func (blinker *Blinker) Blink() {
-	timer := time.NewTimer(time.Second * 1)
-	// On Goroutine
-	blinker.wg.Add(1)
-	go func(stopChan <-chan bool) {
-		defer blinker.wg.Done()
+	blinker.stopChan = make(chan bool)
+	// ON
+	go func() {
 		for {
 			select {
-			case q := <-blinker.stopChan:
-				timer.Stop()
-				fmt.Println("Stop signal received.", q)
+			case <-blinker.stopChan:
+				fmt.Println("Stop signal received. [ON]")
 				return
-			case <-timer.C:
+			case <-blinker.toggle:
 				fmt.Println("ON")
 				blinker.pin.High()
-				<-time.After(time.Second)
-
-				fmt.Println("OFF")
-				blinker.pin.Low()
-				<-time.After(time.Second)
-				timer = time.NewTimer(time.Second * 1)
+				time.Sleep(blinker.onDuration)
+				blinker.toggle <- true
 			}
 		}
-	}(blinker.stopChan)
-	fmt.Println("Waiting for 15 sec")
-	<-time.After(15 * time.Second)
-	blinker.Stop()
-	fmt.Println("Done stopping the blinker. Returning...")
+	}()
+
+	// OFF
+	go func() {
+		for {
+			select {
+			case <-blinker.stopChan:
+				fmt.Println("Stop signal received. [OFF]")
+				return
+			case <-blinker.toggle:
+				fmt.Println("OFF")
+				blinker.pin.Low()
+				time.Sleep(blinker.offDuration)
+				blinker.toggle <- true
+			}
+		}
+	}()
+
+	//kick off the blinking.
+	blinker.toggle <- true
+
+	/*
+		fmt.Println("Waiting for 20 sec")
+		<-time.After(20 * time.Second)
+		blinker.Stop()
+		fmt.Println("Done stopping the blinker. Returning...")
+	*/
 }
 
 func (blinker *Blinker) Stop() {
 	fmt.Println("Stopping the blinker")
-	blinker.stopChan <- true
-	blinker.wg.Wait()
+	close(blinker.stopChan)
+	<-blinker.toggle
+	blinker.pin.Low()
 }
