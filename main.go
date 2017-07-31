@@ -15,23 +15,32 @@ func main() {
 	}
 	defer rpio.Close()
 
+	motorStopChan := make(chan bool)
+	motor := NewMotor()
+	motor.ToggleDirection()
+	go motor.Run(motorStopChan, 2*time.Millisecond)
+
 	fastestBlinker := NewBlinker(10, BlinkFastest)
 	fastestBlinker.Blink()
-	<-time.After(10 * time.Second)
+	<-time.After(5 * time.Second)
 	fastestBlinker.Stop()
 
 	fastBlinker := NewBlinker(10, BlinkFast)
 	fastBlinker.Blink()
-	<-time.After(10 * time.Second)
+	<-time.After(5 * time.Second)
 	fastBlinker.Stop()
 
 	slowBlinker := NewBlinker(10, BlinkSlow)
 	slowBlinker.Blink()
-	<-time.After(10 * time.Second)
+	<-time.After(5 * time.Second)
 	slowBlinker.Stop()
 
 	slowestBlinker := NewBlinker(10, BlinkSlowest)
 	slowestBlinker.Blink()
-	<-time.After(10 * time.Second)
+	<-time.After(5 * time.Second)
 	slowestBlinker.Stop()
+
+	<-time.After(5 * time.Second)
+	motorStopChan <- true
+	close(motorStopChan)
 }
