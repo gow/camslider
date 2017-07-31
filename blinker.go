@@ -58,7 +58,7 @@ func (blinker *Blinker) Blink() {
 				fmt.Println("Stop signal received. [ON]")
 				return
 			case <-blinker.toggle:
-				fmt.Println("ON")
+				//fmt.Println("ON")
 				blinker.pin.High()
 				time.Sleep(blinker.onDuration)
 				blinker.toggle <- true
@@ -74,7 +74,7 @@ func (blinker *Blinker) Blink() {
 				fmt.Println("Stop signal received. [OFF]")
 				return
 			case <-blinker.toggle:
-				fmt.Println("OFF")
+				//fmt.Println("OFF")
 				blinker.pin.Low()
 				time.Sleep(blinker.offDuration)
 				blinker.toggle <- true
@@ -84,13 +84,6 @@ func (blinker *Blinker) Blink() {
 
 	//kick off the blinking.
 	blinker.toggle <- true
-
-	/*
-		fmt.Println("Waiting for 20 sec")
-		<-time.After(20 * time.Second)
-		blinker.Stop()
-		fmt.Println("Done stopping the blinker. Returning...")
-	*/
 }
 
 func (blinker *Blinker) Stop() {
