@@ -17,8 +17,7 @@ func main() {
 
 	motorStopChan := make(chan bool)
 	motor := NewMotor()
-	motor.ToggleDirection()
-	go motor.Run(motorStopChan, 2*time.Millisecond)
+	go motor.Run(motorStopChan, 20*time.Millisecond)
 
 	fastestBlinker := NewBlinker(10, BlinkFastest)
 	fastestBlinker.Blink()

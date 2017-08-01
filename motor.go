@@ -10,6 +10,13 @@ import (
 const (
 	maxSpeed     int64 = 1000 // steps per sec
 	maxInitSpeed int64 = 500
+
+	//switchInputReadFrequency time.Duration = 100 * time.Millisecond
+)
+
+const (
+	limitSwitchPinA rpio.Pin = rpio.Pin(5)
+	limitSwitchPinB rpio.Pin = rpio.Pin(13)
 )
 
 // Define GPIO signals to use
@@ -34,11 +41,15 @@ type Motor struct {
 	stepPins      []rpio.Pin
 	stepDirection int
 	currentStep   int
+	limitSwitchA  *LimitSwitch
+	limitSwitchB  *LimitSwitch
 }
 
 func NewMotor() *Motor {
 	m := &Motor{
 		stepDirection: 1,
+		limitSwitchA:  NewLimitSwitch(limitSwitchPinA),
+		limitSwitchB:  NewLimitSwitch(limitSwitchPinB),
 	}
 	for _, pinNum := range StepPins {
 		pin := rpio.Pin(pinNum)
@@ -46,6 +57,8 @@ func NewMotor() *Motor {
 		m.stepPins = append(m.stepPins, pin)
 	}
 	m.init()
+	m.ToggleDirection()
+	fmt.Println("Max number of steps: ", m.maxSteps)
 	return m
 }
 
@@ -94,5 +107,48 @@ func (m *Motor) init() {
 	for _, pin := range m.stepPins {
 		pin.Low()
 	}
-	//TODO: Calculate the length.
+	m.Reset()
+	m.ToggleDirection()
+
+	switchNotificationA := m.limitSwitchA.Notify()
+	switchNotificationB := m.limitSwitchB.Notify()
+
+	stepTicker := time.NewTicker(time.Second / time.Duration(maxInitSpeed))
+	m.maxSteps = 0
+	for {
+		select {
+		case <-switchNotificationA:
+			stepTicker.Stop()
+			fmt.Println("Received notification from the switch-A:")
+			return
+		case <-switchNotificationB:
+			stepTicker.Stop()
+			fmt.Println("Received notification from the switch-B:")
+			return
+		case <-stepTicker.C:
+			m.maxSteps++
+			m.Step()
+		}
+	}
+}
+
+func (m *Motor) Reset() {
+	stepTicker := time.NewTicker(time.Second / time.Duration(maxInitSpeed))
+	switchNotificationA := m.limitSwitchA.NotifyAfterRelease()
+	switchNotificationB := m.limitSwitchB.NotifyAfterRelease()
+
+	for {
+		select {
+		case <-switchNotificationA:
+			stepTicker.Stop()
+			fmt.Println("Received notification from the switch-A:")
+			return
+		case <-switchNotificationB:
+			stepTicker.Stop()
+			fmt.Println("Received notification from the switch-B:")
+			return
+		case <-stepTicker.C:
+			m.Step()
+		}
+	}
 }
