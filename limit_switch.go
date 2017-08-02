@@ -22,7 +22,7 @@ func NewLimitSwitch(pin rpio.Pin) *LimitSwitch {
 }
 
 func (s *LimitSwitch) Notify() <-chan bool {
-	notifyChan := make(chan bool)
+	notifyChan := make(chan bool, 1)
 	s.pin.PullUp()
 
 	go func() {
@@ -35,7 +35,8 @@ func (s *LimitSwitch) Notify() <-chan bool {
 					continue
 				}
 				switchInputTicker.Stop()
-				close(notifyChan)
+				notifyChan <- true
+				//close(notifyChan)
 				return
 			}
 		}
@@ -44,8 +45,9 @@ func (s *LimitSwitch) Notify() <-chan bool {
 	return notifyChan
 }
 
+// TODO: fix the switch notification.
 func (s *LimitSwitch) NotifyAfterRelease() <-chan bool {
-	notifyChan := make(chan bool)
+	notifyChan := make(chan bool, 1)
 	s.pin.PullUp()
 
 	go func() {
@@ -67,7 +69,8 @@ func (s *LimitSwitch) NotifyAfterRelease() <-chan bool {
 				}
 				if state == "pressed" {
 					switchInputTicker.Stop()
-					close(notifyChan)
+					notifyChan <- true
+					//close(notifyChan)
 					return
 				}
 			}

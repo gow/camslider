@@ -88,18 +88,37 @@ func (m *Motor) ToggleDirection() {
 	m.stepDirection = -1 * m.stepDirection
 }
 
-func (m *Motor) Run(stopChan <-chan bool, stepDuration time.Duration) {
+func (m *Motor) Run(stopChan <-chan bool, stepDuration time.Duration) <-chan bool {
 	ticker := time.NewTicker(stepDuration)
-	for {
-		select {
-		case <-stopChan:
-			fmt.Println("Stopping the motor")
+	doneChan := make(chan bool, 1)
+
+	switchNotificationA := m.limitSwitchA.NotifyAfterRelease()
+	switchNotificationB := m.limitSwitchB.NotifyAfterRelease()
+
+	// Run the motor asynchronously.
+	go func() {
+		defer func() {
 			ticker.Stop()
-			return
-		case <-ticker.C:
-			m.Step()
+			doneChan <- true
+		}()
+		for {
+			select {
+			case <-stopChan:
+				fmt.Println("Stopping the motor")
+				return
+			case <-ticker.C:
+				m.Step()
+			case <-switchNotificationA:
+				fmt.Println("Received stop notification from the switch-A:")
+				return
+			case <-switchNotificationB:
+				fmt.Println("Received stop notification from the switch-B:")
+				return
+			}
 		}
-	}
+	}()
+
+	return doneChan
 }
 
 func (m *Motor) init() {

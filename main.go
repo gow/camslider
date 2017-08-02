@@ -15,9 +15,12 @@ func main() {
 	}
 	defer rpio.Close()
 
-	motorStopChan := make(chan bool)
-	motor := NewMotor()
-	go motor.Run(motorStopChan, 20*time.Millisecond)
+	motorController := NewMotorController()
+	motorController.Run(
+		WithDelay(5*time.Second),
+		WithTripDuration(20*time.Second),
+		WithRoundTripCount(3),
+	)
 
 	fastestBlinker := NewBlinker(10, BlinkFastest)
 	fastestBlinker.Blink()
@@ -38,8 +41,4 @@ func main() {
 	slowestBlinker.Blink()
 	<-time.After(5 * time.Second)
 	slowestBlinker.Stop()
-
-	<-time.After(5 * time.Second)
-	motorStopChan <- true
-	close(motorStopChan)
 }
