@@ -92,8 +92,8 @@ func (m *Motor) Run(stopChan <-chan bool, stepDuration time.Duration) <-chan boo
 	ticker := time.NewTicker(stepDuration)
 	doneChan := make(chan bool, 1)
 
-	switchNotificationA := m.limitSwitchA.NotifyAfterRelease()
-	switchNotificationB := m.limitSwitchB.NotifyAfterRelease()
+	switchNotificationA := m.limitSwitchA.Notify()
+	switchNotificationB := m.limitSwitchB.Notify()
 
 	// Run the motor asynchronously.
 	go func() {
@@ -101,13 +101,13 @@ func (m *Motor) Run(stopChan <-chan bool, stepDuration time.Duration) <-chan boo
 			ticker.Stop()
 			doneChan <- true
 		}()
-		for {
+		for i := int64(0); i < m.maxSteps; i++ {
 			select {
+			case <-ticker.C:
+				m.Step()
 			case <-stopChan:
 				fmt.Println("Stopping the motor")
 				return
-			case <-ticker.C:
-				m.Step()
 			case <-switchNotificationA:
 				fmt.Println("Received stop notification from the switch-A:")
 				return
@@ -116,6 +116,7 @@ func (m *Motor) Run(stopChan <-chan bool, stepDuration time.Duration) <-chan boo
 				return
 			}
 		}
+		fmt.Printf("Max steps [%d] reached. Stop switch didn't fire. Stopping as a precaution\n", m.maxSteps)
 	}()
 
 	return doneChan
@@ -153,8 +154,8 @@ func (m *Motor) init() {
 
 func (m *Motor) Reset() {
 	stepTicker := time.NewTicker(time.Second / time.Duration(maxInitSpeed))
-	switchNotificationA := m.limitSwitchA.NotifyAfterRelease()
-	switchNotificationB := m.limitSwitchB.NotifyAfterRelease()
+	switchNotificationA := m.limitSwitchA.Notify()
+	switchNotificationB := m.limitSwitchB.Notify()
 
 	for {
 		select {

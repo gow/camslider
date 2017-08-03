@@ -18,8 +18,9 @@ func main() {
 	motorController := NewMotorController()
 	motorController.Run(
 		WithDelay(5*time.Second),
-		WithTripDuration(20*time.Second),
-		WithRoundTripCount(3),
+		WithTripDuration(10*time.Second),
+		WithRoundTripCount(2),
+		WithTripEndPause(2*time.Second),
 	)
 
 	fastestBlinker := NewBlinker(10, BlinkFastest)

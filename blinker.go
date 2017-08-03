@@ -15,6 +15,7 @@ type BlinkSpeed int
 const (
 	BlinkFastest BlinkSpeed = iota
 	BlinkFast
+	BlinkNormal
 	BlinkSlow
 	BlinkSlowest
 )
@@ -23,6 +24,7 @@ func (blinkSpeed BlinkSpeed) Duration() time.Duration {
 	return map[BlinkSpeed]time.Duration{
 		BlinkFastest: 50 * time.Millisecond,
 		BlinkFast:    100 * time.Millisecond,
+		BlinkNormal:  500 * time.Millisecond,
 		BlinkSlow:    700 * time.Millisecond,
 		BlinkSlowest: 1500 * time.Millisecond,
 	}[blinkSpeed]

@@ -28,15 +28,25 @@ func (s *LimitSwitch) Notify() <-chan bool {
 	go func() {
 		defer s.pin.PullOff()
 		switchInputTicker := time.NewTicker(switchInputReadFrequency)
+		isSwitchReleased := false
 		for {
 			select {
 			case <-switchInputTicker.C:
+				// First make sure the switch is in released position.
+				if !isSwitchReleased {
+					if s.pin.Read() == rpio.High {
+						isSwitchReleased = true
+					}
+					continue
+				}
+
+				// Now check if the switch was depressed.
 				if s.pin.Read() != rpio.Low {
 					continue
 				}
 				switchInputTicker.Stop()
 				notifyChan <- true
-				//close(notifyChan)
+				close(notifyChan)
 				return
 			}
 		}
@@ -45,7 +55,7 @@ func (s *LimitSwitch) Notify() <-chan bool {
 	return notifyChan
 }
 
-// TODO: fix the switch notification.
+/*
 func (s *LimitSwitch) NotifyAfterRelease() <-chan bool {
 	notifyChan := make(chan bool, 1)
 	s.pin.PullUp()
@@ -79,3 +89,4 @@ func (s *LimitSwitch) NotifyAfterRelease() <-chan bool {
 
 	return notifyChan
 }
+*/
